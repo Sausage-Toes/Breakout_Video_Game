@@ -42,10 +42,23 @@ int HEIGHT;
 int score;
 int oScore;
 bool bricks [14][8]; // 8 rows, 14 columns
+int boarder = 2; //left/right/top boarder width
+int brickWidth = 15;
+int brickHeight = 5;
+int bricksTopY = 66; //y postion of top row of bricks
+int pad = 1; //space between bricks
+int playerTopY = 280; //y postion of player paddle
 int p1; // Player 1 position
 int op1; // Old player 1 position
-int paddleWidth; // Length of the paddle
-int paddleHeight; //Height of the paddle
+int paddleWidth = 32; // Length of the paddle
+int paddleHeight = 5; //Height of the paddle
+double x; // x position of the ball
+double y; // y position of the ball
+double ox; // Old x position of the ball
+double oy; // Old y position of the ball
+double dx; // Delta x for the ball
+double dy; // Delta y for the ball
+int ball = 3;
 
 void setup() 
 {
@@ -58,22 +71,29 @@ void setup()
   WIDTH = tft.width(); //ILI9340_TFTWIDTH  240
   HEIGHT = tft.height(); //ILI9340_TFTHEIGHT 320
   
-  score = 0;
+  score = 999;
   oScore = !score;
   
   //Init Bricks array
-  for (int i = 0; i < 14; i++) 
+  for (byte i = 0; i < 14; i++) 
   {
-        for (int j = 0; j < 8; j++) 
+        for (byte j = 0; j < 8; j++) 
         {
           bricks [i][j] = true;
         }
   }
-  
+
+  //set initial paddle position
   p1 = WIDTH/2;
   op1 = !p1;
-  paddleWidth = 32;
-  paddleHeight = 5;
+
+  //set initial ball postion and direcction
+  x = WIDTH/2;
+  y = (HEIGHT)/2;
+  ox = !x;
+  oy = !y;
+  dx = ball*2;
+  dy = ball*2;
 }
 
 void loop() 
@@ -81,28 +101,22 @@ void loop()
   // put your main code here, to run repeatedly:
 
 // Draw the score for player 1
-  if (score != oScore) { // If the score has changed...
-    tft.drawRect(22, 32, 20, 32, ILI9340_BLACK); // Then erase the old score...
-    score = oScore; // Set the old score to the current score...
-    tft.drawChar(22, 32, '4', ILI9340_WHITE, ILI9340_BLACK, 4); // And draw the new score
+  if (score != oScore) 
+  { 
+    tft.setCursor(22,32);
+    tft.setTextColor(ILI9340_WHITE, ILI9340_BLACK);
+    tft.setTextSize(4);
+    tft.print(score);
   }
   
-
-// Draw Bricks
-int boarder = 2;
-int brickWidth = 15;
-int brickHeight = 5;
-int bricksTopY = 66;
-int pad = 1;
-int playerTopY = 280;
-
-for (int i = 0; i < 14; i++) 
+// Draw the Bricks
+for (byte  i = 0; i < 14; i++) 
   {
-        for (int j = 0; j < 8; j++) 
+        for (byte  j = 0; j < 8; j++) 
         {
+          uint16_t color = ILI9340_BLACK;
           if (bricks [i][j])
           {
-            uint16_t color = ILI9340_RED;
             switch (j)
             {
               case 0 ... 1:
@@ -118,21 +132,62 @@ for (int i = 0; i < 14; i++)
                 color = ILI9340_YELLOW;
                 break;
             }
+            
             tft.fillRect(i+boarder+(i*(brickWidth+pad)), j+bricksTopY+(j*(brickHeight+pad)), brickWidth, brickHeight, color); 
           }
         }
   }
-
+  
+  // Draw the ball
+  if (x != ox || y != oy) { tft.fillCircle(ox, oy, ball, ILI9340_BLACK); ox = x; oy = y; } // Erase the old ball if the position changed
+  tft.fillCircle(x, y, ball, ILI9340_WHITE); // Draw the new ball
+  
+  // Draw paddle
   if (p1 != op1) // Erase the old paddle if the position changed 
   { 
-    //tft.drawFastHLine(op1 - paddleWidth/2, playerTopY, paddleWidth, ILI9340_BLACK); 
     tft.fillRect( op1 - paddleWidth/2, playerTopY, paddleWidth, paddleHeight, ILI9340_BLACK);
     op1 = p1; 
   } 
-  //Draw paddle
-  //tft.drawFastHLine(p1 - paddleWidth/2, playerTopY, paddleWidth, ILI9340_BLUE); // Draw the new paddle
   tft.fillRect( p1 - paddleWidth/2, playerTopY, paddleWidth, paddleHeight, ILI9340_BLUE);
   
-  // Move the paddles
+  // Move the paddle
   p1 = map(analogRead(A0), 0, 1023, (WIDTH - paddleWidth/2)-boarder, paddleWidth/2 + boarder);
+
+  // Update the ball
+  x += dx;
+  y += dy;
+
+  // Check if ball hits walls
+  if (x <= 0 + ball || x >= WIDTH - ball)
+  {
+    dx = -dx;
+  }
+
+  // Check if ball hits ceiling or floor
+  if (y <= 0 +ball || y >= HEIGHT - ball)
+  {
+     dy = -dy;
+  }
+
+  // Check if ball hits paddle
+  if (y >= playerTopY - ball && y <=  playerTopY - ball + paddleHeight)
+  {
+    if ((x >= p1 - paddleWidth/2) && (x <= p1  + paddleWidth/2))
+    {
+      dy = -dy;
+    }
+  }
+
+  if (y >= bricksTopY && y <= bricksTopY + (8 * (brickHeight + pad)))
+  {
+    byte row = map(y, bricksTopY, bricksTopY + (8 * (brickHeight + pad)),0,8);
+    byte col = map(x, 0, 240, 0,13);
+    if (bricks[col][row]) 
+    {
+      bricks[col][row] = false;
+      tft.fillRect(col+boarder+(col*(brickWidth+pad)), row+bricksTopY+(row*(brickHeight+pad)), brickWidth, brickHeight, ILI9340_BLACK);
+      dy = -dy;
+    }
+  }
+  
 }
