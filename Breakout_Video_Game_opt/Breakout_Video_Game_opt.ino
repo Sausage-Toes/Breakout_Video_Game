@@ -46,7 +46,7 @@ int boarder = 2; //left/right/top boarder width
 int brickWidth = 15;
 int brickHeight = 5;
 int bricksTopY = 66; //y postion of top row of bricks
-int pad = 1; //space between bricks
+int pad = 2; //space between bricks
 int playerTopY = 280; //y postion of player paddle
 int p1; // Player 1 position
 int op1; // Old player 1 position
@@ -58,7 +58,9 @@ int ox; // Old x position of the ball
 int oy; // Old y position of the ball
 double dx; // Delta x for the ball
 double dy; // Delta y for the ball
-int ball = 3;
+double odx; // Old Delta x for the ball
+double ody; // Old Delta y for the ball
+int ball = 2;
 
 void setup() 
 {
@@ -84,20 +86,25 @@ void setup()
   y = (HEIGHT)/2;
   ox = !x;
   oy = !y;
-  //dx = ball*2;
-  //dy = ball*2;
   dx = 1;
   dy = 1;
+  odx = dx;
+  ody = dy;
 }
 
 void loop() 
 {
   // put your main code here, to run repeatedly:
-//  Serial.print("dx:");
-//  Serial.print(dx);
-//  Serial.print(" dy:");
-//  Serial.println(dy);
-  
+  if (dx != odx || dy != ody)
+  {
+    Serial.print("dx:");
+    Serial.print(dx);
+    Serial.print(" dy:");
+    Serial.println(dy);
+    odx = dx;
+    ody = dy;
+  }
+
 // Draw the score for player 1
   if (score != oScore) 
   { 
@@ -109,10 +116,26 @@ void loop()
     oScore = score;
   }
 
-
-  
   // Draw the ball
-  if (x != ox || y != oy) { tft.fillCircle(ox, oy, ball, ILI9340_BLACK); ox = x; oy = y; } // Erase the old ball if the position changed
+  if (x != ox || y != oy) // Erase the old ball if the position changed
+  { 
+    tft.fillCircle(ox, oy, ball, ILI9340_BLACK);
+    if (isInBrickArea(oy))
+    {
+      drawBrick (getBrickCol(ox), getBrickRow(oy));
+//      for (int  i = -2; i <= 2; i++) 
+//      {
+//        for (int  j = -2; j <= 2; j++) 
+//        {
+//            if (bricks[getBrickCol(ox)+1][getBrickRow(oy)+j]) drawBrick(getBrickCol(ox)+1,getBrickRow(oy)+j);
+//        }
+//      }
+    }
+
+    
+    ox = x; 
+    oy = y; 
+  } 
   tft.fillCircle(x, y, ball, ILI9340_WHITE); // Draw the new ball
   // Update the ball
   x += dx;
@@ -130,16 +153,30 @@ void loop()
   p1 = map(analogRead(A0), 0, 1023, (WIDTH - paddleWidth/2)-boarder, paddleWidth/2 + boarder);
 
 
-  
-  if (y >= bricksTopY-2*pad && y <= bricksTopY + (8 * (brickHeight + 2*pad)))
+  //Check brick collisions
+  if (isInBrickArea(y))
   {
-    int row = map(y+ball, bricksTopY-2*pad, bricksTopY + (8 * (brickHeight + 2*pad)),0,7);
-    int col = map(x+ball, boarder, WIDTH-2*boarder-ball, 0,13);
-    //int col = map(x+ball, boarder, WIDTH-boarder, 0,13);
+    int col = getBrickCol(x);
+    int row = getBrickRow(y);
+    
+    
     if (bricks[col][row]) 
     {
       bricks[col][row] = false;
-      tft.fillRect(col+boarder+(col*(brickWidth+pad)), row+bricksTopY+(row*(brickHeight+pad)), brickWidth, brickHeight, ILI9340_BLACK);
+      drawBrick (col, row);
+
+
+      
+//      drawBrick (col-1, row);
+//      drawBrick (col+1, row);
+//      drawBrick (col, row+1);
+//      drawBrick (col, row-1);
+//      drawBrick (col-1, row-1);
+//      drawBrick (col-1, row+1);
+//      drawBrick (col+1, row-1);
+//      drawBrick (col+1, row+1);
+      
+      ody = dy;
       dy = -dy;
       
       score++;
@@ -153,12 +190,14 @@ void loop()
   // Check if ball hits walls
   if (x <= 0 + ball || x >= WIDTH - ball)
   {
+    odx = dx;
     dx = -dx;
   }
 
   // Check if ball hits ceiling or floor
-  if (y <= bricksTopY || y >= HEIGHT - ball-10)
+  if (y <= bricksTopY  || y >= HEIGHT - ball-10)
   {
+    ody =dy;
      dy = -dy;
   }
 
@@ -167,9 +206,17 @@ void loop()
   {
     if ((x >= p1 - paddleWidth/2) && (x <= p1  + paddleWidth/2))
     {
+      ody =dy;
       dy = -dy;
+      if ((x == p1 - paddleWidth/2) || (x == p1  + paddleWidth/2))
+      {
+        dx = -dx;
+      }
     }
   }
+
+  //set speed
+  delay(1);
 
 }
 
@@ -196,17 +243,40 @@ void drawBricks()
   {
         for (byte  j = 0; j < 8; j++) 
         {
-          uint16_t color = ILI9340_BLACK;
-          if (bricks [i][j])
-          {
-            if (j == 1 || j == 0) color = ILI9340_RED;
-            else if (j == 2 || j == 3) color = ILI9340_ORANGE;
-            else if (j == 4 || j == 5) color = ILI9340_GREEN;
-            else color = ILI9340_YELLOW;
-            
-            tft.fillRect(i+boarder+(i*(brickWidth+pad)), j+bricksTopY+(j*(brickHeight+pad)), brickWidth, brickHeight, color); 
-          }
+            drawBrick(i,j);
         }
   }
+}
+
+void drawBrick (int col, int row)
+{
+  if ((col >= 0 && col <= 13) && (row >= 0 && row <= 7))
+  {
+    uint16_t color = ILI9340_BLACK;
+    if (bricks [col][row])
+    {
+      if (row == 1 || row == 0) color = ILI9340_RED;
+      else if (row == 2 || row == 3) color = ILI9340_ORANGE;
+      else if (row == 4 || row == 5) color = ILI9340_GREEN;
+      else color = ILI9340_YELLOW;
+    }
+    //tft.fillRect(col+boarder+(col*(brickWidth+pad)), row+bricksTopY+(row*(brickHeight+pad)), brickWidth, brickHeight, color); 
+    tft.fillRect(boarder+(col*(brickWidth+pad)), bricksTopY+(row*(brickHeight+pad)), brickWidth, brickHeight, color); 
+  }
+}
+
+byte getBrickRow(int y)
+{
+ return map(y+ball, bricksTopY-2*pad, bricksTopY + (8 * (brickHeight + 2*pad)),0,7);
+}
+
+byte getBrickCol(int x)
+{
+  return map(x+ball, boarder, WIDTH-2*boarder-ball, 0,13);
+}
+
+bool isInBrickArea(int y)
+{
+  return (y >= bricksTopY-2*pad && y <= bricksTopY + (8 * (brickHeight + 2*pad)));
 }
 
