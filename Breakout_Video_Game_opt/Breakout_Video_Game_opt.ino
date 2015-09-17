@@ -63,6 +63,7 @@ int ball = 3;
 void setup() 
 {
   // put your setup code here, to run once:
+  Serial.begin(9600); // opens serial port, sets data rate to 9600 bps
   pinMode(A0, INPUT); //Init paddle
   
   tft.begin(); // Init display
@@ -83,14 +84,20 @@ void setup()
   y = (HEIGHT)/2;
   ox = !x;
   oy = !y;
-  dx = ball*2;
-  dy = ball*2;
+  //dx = ball*2;
+  //dy = ball*2;
+  dx = 1;
+  dy = 1;
 }
 
 void loop() 
 {
   // put your main code here, to run repeatedly:
-
+//  Serial.print("dx:");
+//  Serial.print(dx);
+//  Serial.print(" dy:");
+//  Serial.println(dy);
+  
 // Draw the score for player 1
   if (score != oScore) 
   { 
@@ -98,44 +105,18 @@ void loop()
     tft.setTextColor(ILI9340_WHITE, ILI9340_BLACK);
     tft.setTextSize(4);
     tft.print(score);
+    Serial.println(score);
+    oScore = score;
   }
 
-// Draw the Bricks
-for (byte  i = 0; i < 14; i++) 
-  {
-        for (byte  j = 0; j < 8; j++) 
-        {
-          uint16_t color = ILI9340_BLACK;
-          if (bricks [i][j])
-          {
-//            switch (j)
-//            {
-//              case 0 ... 1:
-//                color = ILI9340_RED;
-//                break;
-//              case 2 ... 3:
-//                color = ILI9340_ORANGE;
-//                break;
-//              case 4 ... 5:
-//                color = ILI9340_GREEN;
-//                break;
-//              case 6 ... 7:
-//                color = ILI9340_YELLOW;
-//                break;
-//            }
-            if (j == 1 || j == 0) color = ILI9340_RED;
-            else if (j == 2 || j == 3) color = ILI9340_ORANGE;
-            else if (j == 4 || j == 5) color = ILI9340_GREEN;
-            else color = ILI9340_GREEN;
-            
-            tft.fillRect(i+boarder+(i*(brickWidth+pad)), j+bricksTopY+(j*(brickHeight+pad)), brickWidth, brickHeight, color); 
-          }
-        }
-  }
+
   
   // Draw the ball
   if (x != ox || y != oy) { tft.fillCircle(ox, oy, ball, ILI9340_BLACK); ox = x; oy = y; } // Erase the old ball if the position changed
   tft.fillCircle(x, y, ball, ILI9340_WHITE); // Draw the new ball
+  // Update the ball
+  x += dx;
+  y += dy;
   
   // Draw paddle
   if (p1 != op1) // Erase the old paddle if the position changed 
@@ -148,19 +129,19 @@ for (byte  i = 0; i < 14; i++)
   // Move the paddle
   p1 = map(analogRead(A0), 0, 1023, (WIDTH - paddleWidth/2)-boarder, paddleWidth/2 + boarder);
 
-  // Update the ball
-  x += dx;
-  y += dy;
+
   
   if (y >= bricksTopY-2*pad && y <= bricksTopY + (8 * (brickHeight + 2*pad)))
   {
-    int row = map(y+ball, bricksTopY-2*pad, bricksTopY + (8 * (brickHeight + 2*pad)),0,8);
+    int row = map(y+ball, bricksTopY-2*pad, bricksTopY + (8 * (brickHeight + 2*pad)),0,7);
     int col = map(x+ball, boarder, WIDTH-2*boarder-ball, 0,13);
+    //int col = map(x+ball, boarder, WIDTH-boarder, 0,13);
     if (bricks[col][row]) 
     {
       bricks[col][row] = false;
       tft.fillRect(col+boarder+(col*(brickWidth+pad)), row+bricksTopY+(row*(brickHeight+pad)), brickWidth, brickHeight, ILI9340_BLACK);
       dy = -dy;
+      
       score++;
       if (score == 112)
       {
@@ -176,13 +157,13 @@ for (byte  i = 0; i < 14; i++)
   }
 
   // Check if ball hits ceiling or floor
-  if (y <= 0 +ball || y >= HEIGHT - ball-10)
+  if (y <= bricksTopY || y >= HEIGHT - ball-10)
   {
      dy = -dy;
   }
 
   // Check if ball hits paddle
-  if (y >= playerTopY - ball && y <=  playerTopY - ball + paddleHeight)
+  if (y >= playerTopY - ball && y <=  playerTopY + ball + paddleHeight)
   {
     if ((x >= p1 - paddleWidth/2) && (x <= p1  + paddleWidth/2))
     {
@@ -205,5 +186,27 @@ void initBricks()
   //center ball
   x = WIDTH/2;
   y = (HEIGHT)/2;
+  // Draw the Bricks
+  drawBricks();
+}
+
+void drawBricks()
+{
+  for (byte  i = 0; i < 14; i++) 
+  {
+        for (byte  j = 0; j < 8; j++) 
+        {
+          uint16_t color = ILI9340_BLACK;
+          if (bricks [i][j])
+          {
+            if (j == 1 || j == 0) color = ILI9340_RED;
+            else if (j == 2 || j == 3) color = ILI9340_ORANGE;
+            else if (j == 4 || j == 5) color = ILI9340_GREEN;
+            else color = ILI9340_YELLOW;
+            
+            tft.fillRect(i+boarder+(i*(brickWidth+pad)), j+bricksTopY+(j*(brickHeight+pad)), brickWidth, brickHeight, color); 
+          }
+        }
+  }
 }
 
