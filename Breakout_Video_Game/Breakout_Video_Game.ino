@@ -52,10 +52,10 @@ int p1; // Player 1 position
 int op1; // Old player 1 position
 int paddleWidth = 32; // Length of the paddle
 int paddleHeight = 5; //Height of the paddle
-double x; // x position of the ball
-double y; // y position of the ball
-double ox; // Old x position of the ball
-double oy; // Old y position of the ball
+int x; // x position of the ball
+int y; // y position of the ball
+int ox; // Old x position of the ball
+int oy; // Old y position of the ball
 double dx; // Delta x for the ball
 double dy; // Delta y for the ball
 int ball = 3;
@@ -71,8 +71,8 @@ void setup()
   WIDTH = tft.width(); //ILI9340_TFTWIDTH  240
   HEIGHT = tft.height(); //ILI9340_TFTHEIGHT 320
   
-  score = 999;
-  oScore = !score;
+  score = 0;
+  oScore = -1;
   
   //Init Bricks array
   for (byte i = 0; i < 14; i++) 
@@ -108,6 +108,8 @@ void loop()
     tft.setTextSize(4);
     tft.print(score);
   }
+
+
   
 // Draw the Bricks
 for (byte  i = 0; i < 14; i++) 
@@ -157,6 +159,40 @@ for (byte  i = 0; i < 14; i++)
   x += dx;
   y += dy;
 
+
+//  tft.drawFastHLine(0, bricksTopY-2*pad, WIDTH, ILI9340_CYAN);
+//  tft.drawFastHLine(0, bricksTopY + (8 * (brickHeight + 2*pad)), WIDTH, ILI9340_CYAN);
+  
+  if (y >= bricksTopY-2*pad && y <= bricksTopY + (8 * (brickHeight + 2*pad)))
+  {
+    int row = map(y+ball, bricksTopY-2*pad, bricksTopY + (8 * (brickHeight + 2*pad)),0,8);
+    int col = map(x+ball, boarder, WIDTH-2*boarder-ball, 0,13);
+
+//  tft.fillRect(0, 310, 240, 8, ILI9340_BLACK);
+//  tft.setCursor(0,310);
+//  tft.setTextColor(ILI9340_WHITE, ILI9340_BLACK);
+//  tft.setTextSize(1);
+//  tft.print("col=");
+//  tft.print(col);
+//  tft.print(", row=");
+//  tft.print(row);
+//
+//  tft.print("   x=");
+//  tft.print(x);
+//  tft.print(", y=");
+//  tft.print(y);
+    
+    if (bricks[col][row]) 
+    {
+      bricks[col][row] = false;
+      tft.fillRect(col+boarder+(col*(brickWidth+pad)), row+bricksTopY+(row*(brickHeight+pad)), brickWidth, brickHeight, ILI9340_BLACK);
+      dy = -dy;
+      score++;
+    }
+  }
+
+
+
   // Check if ball hits walls
   if (x <= 0 + ball || x >= WIDTH - ball)
   {
@@ -164,7 +200,7 @@ for (byte  i = 0; i < 14; i++)
   }
 
   // Check if ball hits ceiling or floor
-  if (y <= 0 +ball || y >= HEIGHT - ball)
+  if (y <= 0 +ball || y >= HEIGHT - ball-10)
   {
      dy = -dy;
   }
@@ -178,16 +214,7 @@ for (byte  i = 0; i < 14; i++)
     }
   }
 
-  if (y >= bricksTopY && y <= bricksTopY + (8 * (brickHeight + pad)))
-  {
-    byte row = map(y, bricksTopY, bricksTopY + (8 * (brickHeight + pad)),0,8);
-    byte col = map(x, 0, 240, 0,13);
-    if (bricks[col][row]) 
-    {
-      bricks[col][row] = false;
-      tft.fillRect(col+boarder+(col*(brickWidth+pad)), row+bricksTopY+(row*(brickHeight+pad)), brickWidth, brickHeight, ILI9340_BLACK);
-      dy = -dy;
-    }
-  }
+
+
   
 }
