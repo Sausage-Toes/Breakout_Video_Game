@@ -208,6 +208,12 @@ void loop()
     {
       ody =dy;
       dy = -dy;
+      if (dy > 0) {
+        y = playerTopY + ball + paddleHeight;
+      }
+      else {
+        y = playerTopY - ball;
+      }
       if ((x == p1 - paddleWidth/2) || (x == p1  + paddleWidth/2))
       {
         dx = -dx;
