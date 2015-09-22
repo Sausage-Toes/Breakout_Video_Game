@@ -60,7 +60,9 @@ double dx; // Delta x for the ball
 double dy; // Delta y for the ball
 double odx; // Old Delta x for the ball
 double ody; // Old Delta y for the ball
-int ball = 2;
+int ball = 1;
+int speedDelay = 10;
+int topPlayField = (2 * boarder) + (8 * 4) + 1; 
 
 void setup() 
 {
@@ -73,7 +75,8 @@ void setup()
   tft.fillScreen(ILI9340_BLACK); // Clear the screen
   WIDTH = tft.width(); //ILI9340_TFTWIDTH  240
   HEIGHT = tft.height(); //ILI9340_TFTHEIGHT 320
-  
+  Serial.print("w:");Serial.println(WIDTH);
+  Serial.print("h:");Serial.println(HEIGHT);
   //Init Bricks array
   initBricks();
 
@@ -90,30 +93,41 @@ void setup()
   dy = 1;
   odx = dx;
   ody = dy;
+
+  
+  //tft.drawFastVLine(boarder-1, boarder, HEIGHT-2*boarder, ILI9340_WHITE);//left
+  //tft.drawFastVLine(WIDTH-1, boarder, HEIGHT-2*boarder, ILI9340_WHITE);//right
+  //tft.drawFastHLine(boarder, boarder, WIDTH-boarder, ILI9340_WHITE); //top
+  //tft.drawFastHLine(boarder, HEIGHT-boarder, WIDTH-boarder, ILI9340_WHITE);//bottom
+  
+  tft.drawFastHLine(boarder, topPlayField-1, WIDTH-boarder, ILI9340_WHITE);
+  tft.drawFastVLine(boarder-1, topPlayField, HEIGHT-topPlayField - boarder, ILI9340_WHITE);//left
+  tft.drawFastVLine(WIDTH-1, topPlayField, HEIGHT-topPlayField - boarder, ILI9340_WHITE);//right
+ 
+  
 }
 
 void loop() 
 {
   // put your main code here, to run repeatedly:
-  if (dx != odx || dy != ody)
-  {
-    Serial.print("dx:");
-    Serial.print(dx);
-    Serial.print(" dy:");
-    Serial.println(dy);
-    odx = dx;
-    ody = dy;
-  }
+
+  //tft.drawFastVLine(boarder + (brickWidth + pad), 0, HEIGHT, ILI9340_CYAN);
 
 // Draw the score for player 1
   if (score != oScore) 
   { 
-    tft.setCursor(22,32);
+    //tft.setCursor(22,32);
+    tft.setCursor(22,boarder+pad);
     tft.setTextColor(ILI9340_WHITE, ILI9340_BLACK);
     tft.setTextSize(4);
     tft.print(score);
-    Serial.println(score);
+    Serial.print("score:");Serial.println(score);
+    Serial.print("x:");Serial.println(x);
+    Serial.print("y:");Serial.println(y);
+    Serial.print("col:");Serial.println(getBrickCol(x));
+    Serial.print("row:");Serial.println(getBrickRow(y));
     oScore = score;
+    //if (score == 3) speedDelay = 99999;
   }
 
   // Draw the ball
@@ -123,16 +137,7 @@ void loop()
     if (isInBrickArea(oy))
     {
       drawBrick (getBrickCol(ox), getBrickRow(oy));
-//      for (int  i = -2; i <= 2; i++) 
-//      {
-//        for (int  j = -2; j <= 2; j++) 
-//        {
-//            if (bricks[getBrickCol(ox)+1][getBrickRow(oy)+j]) drawBrick(getBrickCol(ox)+1,getBrickRow(oy)+j);
-//        }
-//      }
     }
-
-    
     ox = x; 
     oy = y; 
   } 
@@ -159,23 +164,11 @@ void loop()
     int col = getBrickCol(x);
     int row = getBrickRow(y);
     
-    
     if (bricks[col][row]) 
     {
       bricks[col][row] = false;
       drawBrick (col, row);
 
-
-      
-//      drawBrick (col-1, row);
-//      drawBrick (col+1, row);
-//      drawBrick (col, row+1);
-//      drawBrick (col, row-1);
-//      drawBrick (col-1, row-1);
-//      drawBrick (col-1, row+1);
-//      drawBrick (col+1, row-1);
-//      drawBrick (col+1, row+1);
-      
       ody = dy;
       dy = -dy;
       
@@ -188,17 +181,18 @@ void loop()
   }
 
   // Check if ball hits walls
-  if (x <= 0 + ball || x >= WIDTH - ball)
+  if (x <= boarder + ball || x >= WIDTH - boarder - ball)
   {
     odx = dx;
     dx = -dx;
   }
 
   // Check if ball hits ceiling or floor
-  if (y <= bricksTopY  || y >= HEIGHT - ball-10)
+  //if (y <= bricksTopY  || y >= HEIGHT - ball-10)
+  if (y - ball <= topPlayField  || y >= HEIGHT - ball-10)
   {
     ody =dy;
-     dy = -dy;
+    dy = -dy;
   }
 
   // Check if ball hits paddle
@@ -208,12 +202,15 @@ void loop()
     {
       ody =dy;
       dy = -dy;
+      //fix for sticky paddle bug
       if (dy > 0) {
         y = playerTopY + ball + paddleHeight;
       }
       else {
         y = playerTopY - ball;
       }
+
+      //check paddle sides
       if ((x == p1 - paddleWidth/2) || (x == p1  + paddleWidth/2))
       {
         dx = -dx;
@@ -222,7 +219,7 @@ void loop()
   }
 
   //set speed
-  delay(1);
+  delay(speedDelay);
 
 }
 
@@ -236,6 +233,7 @@ void initBricks()
           bricks [i][j] = true;
         }
   }
+  
   //center ball
   x = WIDTH/2;
   y = (HEIGHT)/2;
@@ -261,28 +259,51 @@ void drawBrick (int col, int row)
     uint16_t color = ILI9340_BLACK;
     if (bricks [col][row])
     {
-      if (row == 1 || row == 0) color = ILI9340_RED;
+      if (row == 0 || row == 1) color = ILI9340_RED;
       else if (row == 2 || row == 3) color = ILI9340_ORANGE;
       else if (row == 4 || row == 5) color = ILI9340_GREEN;
       else color = ILI9340_YELLOW;
-    }
-    //tft.fillRect(col+boarder+(col*(brickWidth+pad)), row+bricksTopY+(row*(brickHeight+pad)), brickWidth, brickHeight, color); 
-    tft.fillRect(boarder+(col*(brickWidth+pad)), bricksTopY+(row*(brickHeight+pad)), brickWidth, brickHeight, color); 
+    } 
+    tft.fillRect(boarder + (col * (brickWidth + pad)), bricksTopY + (row * (brickHeight + pad)), brickWidth, brickHeight, color); 
   }
 }
 
 byte getBrickRow(int y)
 {
- return map(y+ball, bricksTopY-2*pad, bricksTopY + (8 * (brickHeight + 2*pad)),0,7);
+  return  map(y, bricksTopY-pad, bricksTopY + (8 * (brickHeight + pad)),0,7);
 }
 
 byte getBrickCol(int x)
 {
-  return map(x+ball, boarder, WIDTH-2*boarder-ball, 0,13);
+  //return map(x, boarder, WIDTH-boarder, 0,13);
+   //return map(x, 0, 239, 0,13);  
+int col = -1;
+if (x > 0 && x <= brickWidth + pad) col = 0;
+else if (x > brickWidth + pad && x <= 2 * (brickWidth + pad)) col = 1;
+else if (x > 2 * (brickWidth + pad)  && x <= 3 * (brickWidth + pad)) col = 2;
+else if (x > 3 * (brickWidth + pad)  && x <= 4 * (brickWidth + pad)) col = 3;
+else if (x > 4 * (brickWidth + pad)  && x <= 5 * (brickWidth + pad)) col = 4;
+else if (x > 5 * (brickWidth + pad)  && x <= 6 * (brickWidth + pad)) col = 5;
+else if (x > 6 * (brickWidth + pad)  && x <= 7 * (brickWidth + pad)) col = 6;
+else if (x > 7 * (brickWidth + pad)  && x <= 8 * (brickWidth + pad)) col = 7;
+else if (x > 8 * (brickWidth + pad)  && x <= 9 * (brickWidth + pad)) col = 8;
+else if (x > 9 * (brickWidth + pad)  && x <= 10 * (brickWidth + pad)) col = 9;
+else if (x > 10 * (brickWidth + pad)  && x <= 11 * (brickWidth + pad)) col = 10;
+else if (x > 11 * (brickWidth + pad)  && x <= 12 * (brickWidth + pad)) col = 11;
+else if (x > 12 * (brickWidth + pad)  && x <= 13 * (brickWidth + pad)) col = 12;
+else if (x > 13 * (brickWidth + pad)  && x <= 14 * (brickWidth + pad)) col = 13;
+
+//int r = map(x, 0, 239, 0,13);
+//
+//if (col != r) 
+//{
+//  Serial.print("!!!! map:"); Serial.print(r); Serial.print(" col:"); Serial.print(col);  Serial.println("!!!!");  
+//}
+return col;
 }
 
 bool isInBrickArea(int y)
 {
-  return (y >= bricksTopY-2*pad && y <= bricksTopY + (8 * (brickHeight + 2*pad)));
+  return (y > bricksTopY && y <= bricksTopY + (8 * (brickHeight + pad)));
 }
 
