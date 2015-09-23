@@ -37,32 +37,33 @@
 //Adafruit_ILI9340 tft = Adafruit_ILI9340(_cs, _dc, _mosi, _sclk, _rst, _miso);// Using software SPI is really not suggested, its incredibly slow
 // TFT object // Use hardware SPI
 Adafruit_ILI9340 tft = Adafruit_ILI9340(_cs, _dc, _rst);
-int WIDTH;
-int HEIGHT;
-int score=0;
-int oScore=-1;
+short WIDTH;
+short HEIGHT;
+short score=0;
+short oScore=-1;
 bool bricks [14][8]; // 8 rows, 14 columns
-int boarder = 2; //left/right/top boarder width
-int brickWidth = 15;
-int brickHeight = 5;
-int bricksTopY = 66; //y postion of top row of bricks
-int pad = 2; //space between bricks
-int playerTopY = 280; //y postion of player paddle
-int p1; // Player 1 position
-int op1; // Old player 1 position
-int paddleWidth = 32; // Length of the paddle
-int paddleHeight = 5; //Height of the paddle
-int x; // x position of the ball
-int y; // y position of the ball
-int ox; // Old x position of the ball
-int oy; // Old y position of the ball
-double dx; // Delta x for the ball
-double dy; // Delta y for the ball
-double odx; // Old Delta x for the ball
-double ody; // Old Delta y for the ball
-int ball = 1;
-int speedDelay = 10;
-int topPlayField = (2 * boarder) + (8 * 4) + 1; 
+byte boarder = 2; //left/right/top boarder width
+const byte brickWidth = 15;
+const byte brickHeight = 5;
+const short bricksTopY = 66; //y postion of top row of bricks
+byte pad = 2; //space between bricks
+const short playerTopY = 280; //y postion of player paddle
+short p1; // Player 1 position
+short op1; // Old player 1 position
+byte paddleWidth = 32; // Length of the paddle
+const byte paddleHeight = 5; //Height of the paddle
+short x; // x position of the ball
+short y; // y position of the ball
+short ox; // Old x position of the ball
+short oy; // Old y position of the ball
+short dx; // Delta x for the ball
+short dy; // Delta y for the ball
+short odx; // Old Delta x for the ball
+short ody; // Old Delta y for the ball
+const byte ball = 2;
+byte speedDelay = 0;
+const byte textSize = 4;
+short topPlayField = (2 * boarder) + (8 * textSize) + 1; 
 
 void setup() 
 {
@@ -94,7 +95,6 @@ void setup()
   odx = dx;
   ody = dy;
 
-  
   //tft.drawFastVLine(boarder-1, boarder, HEIGHT-2*boarder, ILI9340_WHITE);//left
   //tft.drawFastVLine(WIDTH-1, boarder, HEIGHT-2*boarder, ILI9340_WHITE);//right
   //tft.drawFastHLine(boarder, boarder, WIDTH-boarder, ILI9340_WHITE); //top
@@ -104,7 +104,6 @@ void setup()
   tft.drawFastVLine(boarder-1, topPlayField, HEIGHT-topPlayField - boarder, ILI9340_WHITE);//left
   tft.drawFastVLine(WIDTH-1, topPlayField, HEIGHT-topPlayField - boarder, ILI9340_WHITE);//right
  
-  
 }
 
 void loop() 
@@ -119,7 +118,7 @@ void loop()
     //tft.setCursor(22,32);
     tft.setCursor(22,boarder+pad);
     tft.setTextColor(ILI9340_WHITE, ILI9340_BLACK);
-    tft.setTextSize(4);
+    tft.setTextSize(textSize);
     tft.print(score);
     Serial.print("score:");Serial.println(score);
     Serial.print("x:");Serial.println(x);
@@ -134,10 +133,11 @@ void loop()
   if (x != ox || y != oy) // Erase the old ball if the position changed
   { 
     tft.fillCircle(ox, oy, ball, ILI9340_BLACK);
-    if (isInBrickArea(oy))
-    {
-      drawBrick (getBrickCol(ox), getBrickRow(oy));
-    }
+//    if (isInBrickArea(oy))
+//    {
+//      //drawBrick (getBrickCol(ox), getBrickRow(oy));
+//      drawBrick (getBrickCol(ox+ball*odx), getBrickRow(oy+ball*ody));
+//    }
     ox = x; 
     oy = y; 
   } 
@@ -161,8 +161,8 @@ void loop()
   //Check brick collisions
   if (isInBrickArea(y))
   {
-    int col = getBrickCol(x);
-    int row = getBrickRow(y);
+    byte col = getBrickCol(x);
+    byte row = getBrickRow(y);
     
     if (bricks[col][row]) 
     {
@@ -252,7 +252,7 @@ void drawBricks()
   }
 }
 
-void drawBrick (int col, int row)
+void drawBrick (byte col, byte row)
 {
   if ((col >= 0 && col <= 13) && (row >= 0 && row <= 7))
   {
@@ -268,16 +268,16 @@ void drawBrick (int col, int row)
   }
 }
 
-byte getBrickRow(int y)
+byte getBrickRow(short y)
 {
   return  map(y, bricksTopY-pad, bricksTopY + (8 * (brickHeight + pad)),0,7);
 }
 
-byte getBrickCol(int x)
+byte getBrickCol(short x)
 {
   //return map(x, boarder, WIDTH-boarder, 0,13);
    //return map(x, 0, 239, 0,13);  
-int col = -1;
+byte col = 255;
 if (x > 0 && x <= brickWidth + pad) col = 0;
 else if (x > brickWidth + pad && x <= 2 * (brickWidth + pad)) col = 1;
 else if (x > 2 * (brickWidth + pad)  && x <= 3 * (brickWidth + pad)) col = 2;
@@ -302,7 +302,7 @@ else if (x > 13 * (brickWidth + pad)  && x <= 14 * (brickWidth + pad)) col = 13;
 return col;
 }
 
-bool isInBrickArea(int y)
+bool isInBrickArea(short y)
 {
   return (y > bricksTopY && y <= bricksTopY + (8 * (brickHeight + pad)));
 }
